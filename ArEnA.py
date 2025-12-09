@@ -297,25 +297,48 @@ class AGIAgent:
         
         return random.choice(available_actions)
     
-    def _minimax_eval(self, env, action, depth):
-        """Minimax with alpha-beta pruning for lookahead"""
-        if depth == 0:
-            return 0
-        
-        # Simulate the move
-        sim_env = self._simulate_move(env, action)
-        
-        if sim_env.game_over:
-            if sim_env.winner == self.player_id:
-                return 100
-            elif sim_env.winner == 0:
-                return -5
-            else:
-                return -100
-        
-        # Evaluate position heuristically
-        return sim_env.evaluate_position(self.player_id)
-    
+    def _minimax_eval(self, env, action, depth, is_maximizing=True):
+        """
+        AGI Enhancement: True Minimax with Alpha-Beta Pruning.
+        This function initiates the recursive search for a given starting action.
+        """
+        # Simulate the initial move to get the new board state
+        sim_env = self._simulate_move(env, action, self.player_id)
+
+        # Start the recursive search from the new state.
+        # The next turn belongs to the opponent, so is_maximizing is False.
+        return self._minimax_recursive(sim_env, depth - 1, -np.inf, np.inf, False)
+
+    def _minimax_recursive(self, env, depth, alpha, beta, is_maximizing_player):
+        """Recursive helper for the Minimax algorithm."""
+        # Base case: if max depth is reached or game is over, return heuristic score
+        if depth == 0 or env.game_over:
+            return env.evaluate_position(self.player_id)
+
+        if is_maximizing_player:
+            max_eval = -np.inf
+            for move in env.get_available_actions():
+                # Simulate a move for the maximizing player (our agent)
+                child_env = self._simulate_move(env, move, self.player_id)
+                eval_score = self._minimax_recursive(child_env, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break  # Beta cut-off
+            return max_eval
+        else:  # Minimizing player
+            min_eval = np.inf
+            opponent_id = 3 - self.player_id
+            for move in env.get_available_actions():
+                # Simulate a move for the minimizing player (opponent)
+                child_env = self._simulate_move(env, move, opponent_id)
+                eval_score = self._minimax_recursive(child_env, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, eval_score)
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break  # Alpha cut-off
+            return min_eval
+
     def _evaluate_action_urgency(self, env, action):
         """Detect winning moves and blocking needs"""
         sim_env = self._simulate_move(env, action)
