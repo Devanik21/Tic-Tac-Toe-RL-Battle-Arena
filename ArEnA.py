@@ -794,6 +794,10 @@ if train_button:
     st.toast("AGI Training Complete!", icon="🎉")
     
     st.session_state.training_history = history
+    # --- FIX START: Persist the updated agents in session state after training ---
+    st.session_state.agent1 = agent1
+    st.session_state.agent2 = agent2
+    # --- FIX END ---
 
 # Display charts and final game if training has occurred
 if 'training_history' in st.session_state and st.session_state.training_history:
