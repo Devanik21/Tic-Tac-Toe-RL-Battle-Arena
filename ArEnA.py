@@ -216,6 +216,21 @@ class AGIAgent:
         self.losses = 0
         self.draws = 0
         self.q_updates = 0
+
+    # In AGIAgent class, add this new method:
+
+    def _get_value_for_player(self, env):
+        """Returns the immediate final reward from a game_over state."""
+        if not env.game_over:
+            return None  # Game is not over
+        
+        if env.winner == self.player_id:
+            return 1000  # AGI-Agent wins!
+        elif env.winner == 3 - self.player_id:
+            return -1000  # AGI-Agent loses!
+        else:
+            return 0  # Draw
+
     
     def get_q_value(self, state, action):
         return self.q_table.get((state, action), self.init_q_value)
@@ -297,24 +312,69 @@ class AGIAgent:
         
         return random.choice(available_actions)
     
+    # Replace the existing AGIAgent._minimax_eval method with this:
+
     def _minimax_eval(self, env, action, depth):
-        """Minimax with alpha-beta pruning for lookahead"""
-        if depth == 0:
-            return 0
+        """
+        Minimax with alpha-beta pruning for full recursive lookahead.
+        The action provided is the first move of the search.
+        """
         
-        # Simulate the move
+        # Start the simulation with the given action
         sim_env = self._simulate_move(env, action)
         
-        if sim_env.game_over:
-            if sim_env.winner == self.player_id:
-                return 100
-            elif sim_env.winner == 0:
-                return -5
-            else:
-                return -100
+        # The Minimax search is done from the perspective of the *next* player
+        # which is 3 - self.player_id after the current action is made.
+        # We want to maximize the score *for self.player_id*
         
-        # Evaluate position heuristically
-        return sim_env.evaluate_position(self.player_id)
+        # Start the recursive search
+        # is_maximizing_player is True if it's currently self.player_id's turn
+        return self._minimax_search(sim_env, depth - 1, -np.inf, np.inf, False)
+
+
+    def _minimax_search(self, env, depth, alpha, beta, is_maximizing_player):
+        """Recursive Minimax search implementation."""
+        
+        # Check for terminal state (win/loss/draw)
+        value = self._get_value_for_player(env)
+        if value is not None:
+            # If terminal, return the value from the AGI-Agent's perspective
+            return value
+
+        # Check for depth limit
+        if depth == 0:
+            # Return heuristic evaluation from AGI-Agent's perspective
+            return env.evaluate_position(self.player_id)
+        
+        available_actions = env.get_available_actions()
+        current_player = env.current_player
+        
+        if is_maximizing_player:
+            # Maximizing player (self.player_id's turn in search)
+            max_eval = -np.inf
+            for action in available_actions:
+                sim_env = self._simulate_move(env, action, current_player)
+                
+                # Recursive call: The next player is minimizing
+                eval_score = self._minimax_search(sim_env, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, eval_score)
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break
+            return max_eval
+        else:
+            # Minimizing player (opponent's turn in search)
+            min_eval = np.inf
+            for action in available_actions:
+                sim_env = self._simulate_move(env, action, current_player)
+                
+                # Recursive call: The next player is maximizing
+                eval_score = self._minimax_search(sim_env, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, eval_score)
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break
+            return min_eval
     
     def _evaluate_action_urgency(self, env, action):
         """Detect winning moves and blocking needs"""
