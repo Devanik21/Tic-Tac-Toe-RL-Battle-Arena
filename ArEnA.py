@@ -236,8 +236,12 @@ def _update_agent_from_history(agent, history, player_id, final_reward):
     # Filter history for this agent's moves
     agent_moves = [(s, a) for s, a, p in history if p == player_id]
     
-    # Create a potential win/block detector for intermediate rewards
-    env_temp = TicTacToe(3, 3)  # Temporary env for checking
+    # Detect grid size from state length
+    if agent_moves:
+        state_size = len(agent_moves[0][0])
+        grid_size = int(np.sqrt(state_size))
+    else:
+        grid_size = 3
     
     # Backward update from end to start
     for i in range(len(agent_moves) - 1, -1, -1):
@@ -253,16 +257,16 @@ def _update_agent_from_history(agent, history, player_id, final_reward):
             
             # STRATEGIC BONUS: Reward creating threats or blocking opponent
             # Reconstruct board from state
-            board = np.array(state).reshape(env_temp.grid_size, env_temp.grid_size)
+            board = np.array(state).reshape(grid_size, grid_size)
             
             # Check if this move created a winning threat (2 in a row)
             row, col = action
-            if _creates_threat(board, row, col, player_id, env_temp.grid_size):
+            if _creates_threat(board, row, col, player_id, grid_size):
                 reward += 0.5  # Bonus for creating threats
             
             # Check if this move blocked opponent's threat
             opponent_id = 3 - player_id
-            if _blocks_threat(board, row, col, opponent_id, env_temp.grid_size):
+            if _blocks_threat(board, row, col, opponent_id, grid_size):
                 reward += 0.3  # Bonus for defensive plays
         
         if i < len(agent_moves) - 1:
