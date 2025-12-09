@@ -727,15 +727,17 @@ if train_button:
             progress = episode / episodes
             progress_bar.progress(progress)
             
-            status_text = f"""
-            **Game {episode}/{episodes}** ({progress*100:.1f}%)
-            - **Agent 1 Wins:** {agent1.wins}
-            - **Agent 2 Wins:** {agent2.wins}
-            - **Draws:** {agent1.draws}
-            - **A1 ε:** {agent1.epsilon:.4f} | **A2 ε:** {agent2.epsilon:.4f}
-            - **A1 Q-States:** {len(agent1.q_table)} | **A2 Q-States:** {len(agent2.q_table)}
+            status_table = f"""
+            | Metric          | Agent 1 (Blue X) | Agent 2 (Red O) |
+            |:----------------|:----------------:|:----------------:|
+            | **Wins**        | {agent1.wins}    | {agent2.wins}   |
+            | **Epsilon (ε)** | {agent1.epsilon:.4f} | {agent2.epsilon:.4f} |
+            | **Q-States**    | {len(agent1.q_table):,} | {len(agent2.q_table):,} |
+
+            ---
+            **Game {episode}/{episodes}** ({progress*100:.1f}%) | **Total Draws:** {agent1.draws}
             """
-            status_container.markdown(status_text)
+            status_container.markdown(status_table)
 
     progress_bar.progress(1.0)
     st.toast("AGI Training Complete!", icon="🎉")
