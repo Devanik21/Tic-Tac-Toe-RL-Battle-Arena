@@ -71,19 +71,19 @@ class TicTacToe:
         if self._check_win(self.current_player):
             self.game_over = True
             self.winner = self.current_player
-            reward = 1  # Win reward
+            reward = 10  # Win reward (reduced from 1 to differentiate better)
             return self.get_state(), reward, True
         
         # Check for draw
         if len(self.get_available_actions()) == 0:
             self.game_over = True
             self.winner = 0
-            reward = 0.5  # Draw reward
+            reward = 0.1  # Small draw reward (reduced from 0.5 to encourage winning)
             return self.get_state(), reward, True
         
-        # Game continues
+        # Game continues - small penalty for each move to encourage faster wins
         self.current_player = 3 - self.current_player  # Switch between 1 and 2
-        return self.get_state(), 0, False
+        return self.get_state(), -0.01, False
     
     def _check_win(self, player):
         """Check if player has won"""
@@ -211,36 +211,59 @@ def play_game(env, agent1, agent2, training=True):
             if env.winner == 1:
                 agent1.wins += 1
                 agent2.losses += 1
-                # Update both agents
+                # Update both agents - winner gets +10, loser gets -5
                 if training:
-                    _update_agent_from_history(agent1, game_history, 1, 1)
-                    _update_agent_from_history(agent2, game_history, 2, -1)
+                    _update_agent_from_history(agent1, game_history, 1, 10)
+                    _update_agent_from_history(agent2, game_history, 2, -5)
             elif env.winner == 2:
                 agent2.wins += 1
                 agent1.losses += 1
                 if training:
-                    _update_agent_from_history(agent1, game_history, 1, -1)
-                    _update_agent_from_history(agent2, game_history, 2, 1)
+                    _update_agent_from_history(agent1, game_history, 1, -5)
+                    _update_agent_from_history(agent2, game_history, 2, 10)
             else:  # Draw
                 agent1.draws += 1
                 agent2.draws += 1
                 if training:
-                    _update_agent_from_history(agent1, game_history, 1, 0.5)
-                    _update_agent_from_history(agent2, game_history, 2, 0.5)
+                    # Draws get very small reward - we want to discourage this
+                    _update_agent_from_history(agent1, game_history, 1, 0.1)
+                    _update_agent_from_history(agent2, game_history, 2, 0.1)
     
     return env.winner
 
 def _update_agent_from_history(agent, history, player_id, final_reward):
-    """Update agent's Q-values based on game outcome"""
+    """Update agent's Q-values based on game outcome with intermediate rewards"""
     # Filter history for this agent's moves
     agent_moves = [(s, a) for s, a, p in history if p == player_id]
+    
+    # Create a potential win/block detector for intermediate rewards
+    env_temp = TicTacToe(3, 3)  # Temporary env for checking
     
     # Backward update from end to start
     for i in range(len(agent_moves) - 1, -1, -1):
         state, action = agent_moves[i]
         
-        # Discount reward based on how far from end
-        discounted_reward = final_reward * (agent.gamma ** (len(agent_moves) - 1 - i))
+        # Calculate base reward
+        if i == len(agent_moves) - 1:
+            # Last move gets the full final reward
+            reward = final_reward
+        else:
+            # Intermediate moves get discounted reward
+            reward = final_reward * (agent.gamma ** (len(agent_moves) - 1 - i))
+            
+            # STRATEGIC BONUS: Reward creating threats or blocking opponent
+            # Reconstruct board from state
+            board = np.array(state).reshape(env_temp.grid_size, env_temp.grid_size)
+            
+            # Check if this move created a winning threat (2 in a row)
+            row, col = action
+            if _creates_threat(board, row, col, player_id, env_temp.grid_size):
+                reward += 0.5  # Bonus for creating threats
+            
+            # Check if this move blocked opponent's threat
+            opponent_id = 3 - player_id
+            if _blocks_threat(board, row, col, opponent_id, env_temp.grid_size):
+                reward += 0.3  # Bonus for defensive plays
         
         if i < len(agent_moves) - 1:
             next_state, next_action = agent_moves[i + 1]
@@ -249,8 +272,45 @@ def _update_agent_from_history(agent, history, player_id, final_reward):
             next_q = 0
         
         current_q = agent.get_q_value(state, action)
-        new_q = current_q + agent.lr * (discounted_reward + agent.gamma * next_q - current_q)
+        new_q = current_q + agent.lr * (reward + agent.gamma * next_q - current_q)
         agent.q_table[(state, action)] = new_q
+
+def _creates_threat(board, row, col, player, grid_size):
+    """Check if a move creates a winning threat (2 in a row with empty third)"""
+    directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+    
+    for dr, dc in directions:
+        count = 1
+        empty = 0
+        
+        # Check both directions
+        for direction in [1, -1]:
+            r, c = row + dr * direction, col + dc * direction
+            for _ in range(2):
+                if 0 <= r < grid_size and 0 <= c < grid_size:
+                    if board[r, c] == player:
+                        count += 1
+                    elif board[r, c] == 0:
+                        empty += 1
+                        break
+                    else:
+                        break
+                else:
+                    break
+                r += dr * direction
+                c += dc * direction
+        
+        if count >= 2 and empty >= 1:
+            return True
+    
+    return False
+
+def _blocks_threat(board, row, col, opponent, grid_size):
+    """Check if move blocks opponent's threat"""
+    # Temporarily place opponent piece to see if they had a threat
+    temp_board = board.copy()
+    temp_board[row, col] = opponent
+    return _creates_threat(temp_board, row, col, opponent, grid_size)
 
 # ============================================================================
 # Visualization Functions
@@ -370,14 +430,14 @@ with st.sidebar.expander("1. Game Configuration", expanded=True):
     st.info(f"Playing on {grid_size}×{grid_size} grid, need {win_length} in a row to win")
 
 with st.sidebar.expander("2. Agent 1 (Blue X) Hyperparameters", expanded=True):
-    lr1 = st.slider("Learning Rate α₁", 0.01, 1.0, 0.1, 0.01)
-    gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
-    epsilon_decay1 = st.slider("Epsilon Decay₁", 0.99, 0.9999, 0.9995, 0.0001, format="%.4f")
+    lr1 = st.slider("Learning Rate α₁", 0.01, 1.0, 0.3, 0.01)
+    gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.9, 0.01)
+    epsilon_decay1 = st.slider("Epsilon Decay₁", 0.99, 0.9999, 0.999, 0.0001, format="%.4f")
 
 with st.sidebar.expander("3. Agent 2 (Red O) Hyperparameters", expanded=True):
-    lr2 = st.slider("Learning Rate α₂", 0.01, 1.0, 0.1, 0.01)
-    gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
-    epsilon_decay2 = st.slider("Epsilon Decay₂", 0.99, 0.9999, 0.9995, 0.0001, format="%.4f")
+    lr2 = st.slider("Learning Rate α₂", 0.01, 1.0, 0.3, 0.01)
+    gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.9, 0.01)
+    epsilon_decay2 = st.slider("Epsilon Decay₂", 0.99, 0.9999, 0.999, 0.0001, format="%.4f")
 
 with st.sidebar.expander("4. Training Configuration", expanded=True):
     episodes = st.number_input("Training Episodes", 100, 100000, 5000, 100)
