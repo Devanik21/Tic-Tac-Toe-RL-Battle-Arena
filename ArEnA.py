@@ -720,21 +720,25 @@ def run_battles(agent1, agent2, env, num_battles):
 
 with st.expander("🔬 Quick Analysis & Head-to-Head Battles", expanded=False):
     st.info("Run battles between the current agents without any learning (ε=0). This is a pure test of their current skill.")
-    battle_cols = st.columns(3)
-    if battle_cols[0].button("Run 10 Battles"):
-        st.session_state.battle_results = run_battles(agent1, agent2, env, 10)
-    if battle_cols[1].button("Run 100 Battles"):
-        st.session_state.battle_results = run_battles(agent1, agent2, env, 100)
-    if battle_cols[2].button("Run 1,000 Battles"):
-        st.session_state.battle_results = run_battles(agent1, agent2, env, 1000)
+    
+    battle_cols = st.columns([2, 1])
+    num_battles_input = battle_cols[0].number_input(
+        "Number of Battles to Run", 
+        min_value=1, max_value=10000, value=100, step=10
+    )
+    
+    if battle_cols[1].button("Run Battles", use_container_width=True, key="run_battles"):
+        with st.spinner(f"Running {num_battles_input} battles..."):
+            st.session_state.battle_results = run_battles(agent1, agent2, env, num_battles_input)
 
     if 'battle_results' in st.session_state and st.session_state.battle_results:
         w1, w2, d = st.session_state.battle_results
-        st.write(f"**Battle Results (out of {w1+w2+d} games):**")
+        total_battles = w1 + w2 + d
+        st.write(f"**Battle Results (out of {total_battles} games):**")
         res_cols = st.columns(3)
-        res_cols[0].metric("Agent 1 Wins", w1)
-        res_cols[1].metric("Agent 2 Wins", w2)
-        res_cols[2].metric("Draws", d)
+        res_cols[0].metric("Agent 1 Wins", w1, f"{w1/total_battles:.1%}" if total_battles > 0 else "0.0%")
+        res_cols[1].metric("Agent 2 Wins", w2, f"{w2/total_battles:.1%}" if total_battles > 0 else "0.0%")
+        res_cols[2].metric("Draws", d, f"{d/total_battles:.1%}" if total_battles > 0 else "0.0%")
 
 # Training section
 if train_button:
