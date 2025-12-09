@@ -702,20 +702,25 @@ def run_battles(agent1, agent2, env, num_battles):
     
     agents = {1: agent1, 2: agent2}
     
-    for _ in range(num_battles):
+    for i in range(num_battles):
         local_env = deepcopy(env)
         local_env.reset()
         
+        # --- FIX: Alternate starting player for fair evaluation ---
+        if i % 2 == 1:
+            local_env.current_player = 2
+        # --- END FIX ---
+
         while not local_env.game_over:
             current_player = local_env.current_player
             action = agents[current_player].choose_action(local_env, training=False)
             if action is None: break
             local_env.make_move(action)
-        
+
         if local_env.winner == 1: battle_wins1 += 1
         elif local_env.winner == 2: battle_wins2 += 1
         else: battle_draws += 1
-            
+
     return battle_wins1, battle_wins2, battle_draws
 
 with st.expander("🔬 Quick Analysis & Head-to-Head Battles", expanded=False):
