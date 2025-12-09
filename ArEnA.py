@@ -363,8 +363,10 @@ st.sidebar.header("⚙️ Battle Arena Controls")
 
 with st.sidebar.expander("1. Game Configuration", expanded=True):
     grid_size = st.slider("Grid Size", 3, 10, 3)
-    max_win = max(3, grid_size)  # Ensure max is always >= min
-    win_length = st.slider("Win Length (in-a-row)", 3, max_win, min(3, grid_size))
+    # Ensure min and max are different for the slider
+    max_win_length = max(grid_size, 4)  # Always at least 4 to avoid min=max
+    default_win = min(grid_size, 3)
+    win_length = st.slider("Win Length (in-a-row)", 3, max_win_length, default_win)
     st.info(f"Playing on {grid_size}×{grid_size} grid, need {win_length} in a row to win")
 
 with st.sidebar.expander("2. Agent 1 (Blue X) Hyperparameters", expanded=True):
