@@ -689,6 +689,53 @@ with col3:
     st.metric("Total Games", total_games)
     st.metric("Draws", agent1.draws, delta_color="off")
 
+st.markdown("---")
+
+# ============================================================================
+# Quick Battles Section
+# ============================================================================
+def run_battles(agent1, agent2, env, num_battles):
+    """Runs a set number of battles without training and returns stats."""
+    battle_wins1 = 0
+    battle_wins2 = 0
+    battle_draws = 0
+    
+    agents = {1: agent1, 2: agent2}
+    
+    for _ in range(num_battles):
+        local_env = deepcopy(env)
+        local_env.reset()
+        
+        while not local_env.game_over:
+            current_player = local_env.current_player
+            action = agents[current_player].choose_action(local_env, training=False)
+            if action is None: break
+            local_env.make_move(action)
+        
+        if local_env.winner == 1: battle_wins1 += 1
+        elif local_env.winner == 2: battle_wins2 += 1
+        else: battle_draws += 1
+            
+    return battle_wins1, battle_wins2, battle_draws
+
+with st.expander("🔬 Quick Analysis & Head-to-Head Battles", expanded=False):
+    st.info("Run battles between the current agents without any learning (ε=0). This is a pure test of their current skill.")
+    battle_cols = st.columns(3)
+    if battle_cols[0].button("Run 10 Battles"):
+        st.session_state.battle_results = run_battles(agent1, agent2, env, 10)
+    if battle_cols[1].button("Run 100 Battles"):
+        st.session_state.battle_results = run_battles(agent1, agent2, env, 100)
+    if battle_cols[2].button("Run 1,000 Battles"):
+        st.session_state.battle_results = run_battles(agent1, agent2, env, 1000)
+
+    if 'battle_results' in st.session_state and st.session_state.battle_results:
+        w1, w2, d = st.session_state.battle_results
+        st.write(f"**Battle Results (out of {w1+w2+d} games):**")
+        res_cols = st.columns(3)
+        res_cols[0].metric("Agent 1 Wins", w1)
+        res_cols[1].metric("Agent 2 Wins", w2)
+        res_cols[2].metric("Draws", d)
+
 # Training section
 if train_button:
     st.subheader("🧠 AGI Training in Progress...")
