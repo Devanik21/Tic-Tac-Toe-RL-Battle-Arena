@@ -57,9 +57,19 @@ class TicTacToe:
     
     def get_available_actions(self):
         """Returns list of available positions"""
-        return [(i, j) for i in range(self.grid_size) 
-                for j in range(self.grid_size) if self.board[i, j] == 0]
-    
+        actions = [(r, c) for r in range(self.grid_size) 
+                   for c in range(self.grid_size) if self.board[r, c] == 0]
+        
+        # --- NEW RULE: Prevent taking the center on the very first move of the game ---
+        # This only applies if the board is completely empty (len(move_history) == 0).
+        if len(self.move_history) == 0 and self.grid_size % 2 != 0:
+            center = self.grid_size // 2
+            center_pos = (center, center)
+            if center_pos in actions:
+                actions.remove(center_pos)
+        
+        return actions
+
     def make_move(self, position):
         """Execute a move and return (next_state, reward, done)"""
         if self.game_over:
