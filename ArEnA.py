@@ -880,15 +880,13 @@ if train_button:
     st.session_state.agent2 = agent2
     # --- FIX END ---
 
-# Display charts and final game if training has occurred
-# Display charts and final game if training has occurred
+# Display charts if training has occurred
 if 'training_history' in st.session_state and st.session_state.training_history:
     st.subheader("📈 Training Performance Analysis")
     history = st.session_state.training_history
     
     df = pd.DataFrame(history)
     
-    # --- FIX START ---
     # We no longer manually calculate 'range()'. We use the saved 'episode' column.
     # If old data exists without 'episode', we create a safe fallback to prevent crashes.
     if 'episode' not in df.columns:
@@ -910,6 +908,9 @@ if 'training_history' in st.session_state and st.session_state.training_history:
     st.write("#### Q-Table Size (Learned States)")
     q_chart_data = df[['episode', 'agent1_q_size', 'agent2_q_size']].set_index('episode')
     st.line_chart(q_chart_data)
+
+# Display final battle if agents are loaded/trained
+if 'agent1' in st.session_state and st.session_state.agent1.q_table:
 
     st.subheader(" Final Battle: Trained Agents")
     st.info("Watch the fully trained agents play one final, decisive game against each other (no exploration).")
@@ -935,3 +936,5 @@ if 'training_history' in st.session_state and st.session_state.training_history:
         if sim_env.winner == 1: st.success("🏆 Agent 1 (Blue X) wins the battle!")
         elif sim_env.winner == 2: st.error("🏆 Agent 2 (Red O) wins the battle!")
         else: st.warning("🤝 The battle is a Draw!")
+else:
+    st.info("Train or load agents to see the Final Battle option.")
