@@ -285,34 +285,26 @@ class StrategicAgent:
                 return random.choice(valid_center_moves)
 
         # ---------------------------------------------------------
-        # ---------------------------------------------------------
         # HIERARCHY LEVEL 2: STRATEGIC PLANNING (Minimax)
         # ---------------------------------------------------------
         if training and random.random() < self.epsilon:
             return random.choice(available_actions)
 
-        # Dynamic Depth & "Extreme" Logic
+        # Dynamic Depth & Asymmetric Boost
         empty_spots = len(available_actions)
-        
-        # 1. Base Bonus: Both agents now think deeper than the slider value
-        depth_bonus = 2 
-        
-        # 2. ENDGAME GOD MODE: 
-        # If the board is getting full (<= 10 spots), the branching factor is low enough 
-        # to solve the game completely. We force maximum depth to see the inevitable result.
-        if empty_spots <= 10:
-            depth_bonus = 10 # Effectively infinite depth for the remaining moves
+        depth_bonus = 0
+        if env.grid_size > 3 and self.player_id == 2:
+            depth_bonus = 2 # Red thinks harder!
             
         if env.grid_size == 3:
             current_depth = 9 
         else:
-            # Calculate final depth, ensuring we don't exceed available spots
             current_depth = min(self.minimax_depth + depth_bonus, empty_spots)
 
         best_score = -float('inf')
         best_actions = []
 
-        # Optimization: Check center moves first for better Alpha-Beta pruning efficiency
+        # Optimization: Check center moves first for better pruning
         center = env.grid_size // 2
         available_actions.sort(key=lambda x: abs(x[0]-center) + abs(x[1]-center))
 
@@ -324,7 +316,6 @@ class StrategicAgent:
             score = self._minimax(sim_env, current_depth - 1, alpha, beta, False)
             
             # Add small noise to break ties based on Q-table (Experience)
-            # This allows them to use their training memory to decide between two "equal" moves
             q_boost = self.get_q_value(env.get_state(), action) * 0.01
             total_score = score + q_boost
 
