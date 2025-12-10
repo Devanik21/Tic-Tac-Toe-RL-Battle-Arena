@@ -294,7 +294,7 @@ class StrategicAgent:
         empty_spots = len(available_actions)
         depth_bonus = 0
         if env.grid_size > 3 and self.player_id == 2:
-            depth_bonus = 1.5 # Red thinks harder!
+            depth_bonus = 2 # Red thinks harder!
             
         if env.grid_size == 3:
             current_depth = 9 
