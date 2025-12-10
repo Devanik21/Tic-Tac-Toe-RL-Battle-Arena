@@ -58,8 +58,27 @@ class TicTacToe:
         return tuple(self.board.flatten())
     
     def get_available_actions(self):
+        # Standard available actions
         actions = [(r, c) for r in range(self.grid_size) 
                    for c in range(self.grid_size) if self.board[r, c] == 0]
+        
+        # --- TOURNAMENT RULE FIX ---
+        # If it is the VERY first move of the game, ban the center.
+        # This removes the "God Mode" advantage for Blue.
+        if len(self.move_history) == 0:
+            center = self.grid_size // 2
+            
+            # If grid is odd (3x3, 5x5), ban the single center point
+            if self.grid_size % 2 == 1:
+                if (center, center) in actions:
+                    actions.remove((center, center))
+            
+            # If grid is even (4x4), ban the central 2x2 block
+            else:
+                forbidden = [(center-1, center-1), (center-1, center), 
+                             (center, center-1), (center, center)]
+                actions = [a for a in actions if a not in forbidden]
+                
         return actions
 
     def make_move(self, position):
@@ -80,9 +99,19 @@ class TicTacToe:
         
         if len(self.get_available_actions()) == 0:
             self.game_over = True
-            self.winner = 0
-            return self.get_state(), 0, True # Draw is better than losing
-        
+            self.winner = 0 
+            
+            # --- DEFENDER BONUS FIX ---
+            # If the game is a Draw:
+            # Player 2 (Red) gets a huge reward (they survived!).
+            # Player 1 (Blue) gets nothing (they failed to attack).
+            if self.current_player == 2:
+                return self.get_state(), 50, True # Red made the last move to cause draw
+            else:
+                # Blue made last move causing draw. 
+                # Blue gets 0, but Red (waiting) effectively won.
+                return self.get_state(), 0, True 
+
         self.current_player = 3 - self.current_player
         return self.get_state(), 0, False
     
