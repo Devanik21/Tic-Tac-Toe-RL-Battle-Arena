@@ -638,12 +638,22 @@ with st.sidebar.expander("1. Game Configuration", expanded=True):
     st.info(f"Playing on {grid_size}×{grid_size} grid, need {win_length} in a row to win")
 
 with st.sidebar.expander("2. Agent 1 (Blue X) Parameters", expanded=True):
+    # Initialize session state for agent parameters if they don't exist
+    if 'lr1' not in st.session_state: st.session_state.lr1 = 0.2
+    if 'gamma1' not in st.session_state: st.session_state.gamma1 = 0.95
+    if 'epsilon_decay1' not in st.session_state: st.session_state.epsilon_decay1 = 0.998
+    if 'minimax_depth1' not in st.session_state: st.session_state.minimax_depth1 = 3
     lr1 = st.slider("Learning Rate α₁", 0.01, 1.0, 0.2, 0.01)
     gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
     epsilon_decay1 = st.slider("Epsilon Decay₁", 0.99, 0.9999, 0.998, 0.0001, format="%.4f")
     minimax_depth1 = st.slider("Minimax Depth₁", 1, 5, 3)
 
 with st.sidebar.expander("3. Agent 2 (Red O) Parameters", expanded=True):
+    # Initialize session state for agent parameters if they don't exist
+    if 'lr2' not in st.session_state: st.session_state.lr2 = 0.2
+    if 'gamma2' not in st.session_state: st.session_state.gamma2 = 0.95
+    if 'epsilon_decay2' not in st.session_state: st.session_state.epsilon_decay2 = 0.998
+    if 'minimax_depth2' not in st.session_state: st.session_state.minimax_depth2 = 3
     lr2 = st.slider("Learning Rate α₂", 0.01, 1.0, 0.2, 0.01)
     gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
     epsilon_decay2 = st.slider("Epsilon Decay₂", 0.99, 0.9999, 0.998, 0.0001, format="%.4f")
@@ -675,17 +685,30 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
             if a1:
                 st.session_state.agent1 = a1
                 st.session_state.agent2 = a2
-                st.session_state.agent1.minimax_depth = minimax_depth1
-                st.session_state.agent2.minimax_depth = minimax_depth2
+                # Restore config and agent parameters to the UI
+                st.session_state.grid_size = cfg.get("grid_size", 3)
+                st.session_state.win_length = cfg.get("win_length", 3)
+                st.session_state.lr1 = a1.lr
+                st.session_state.gamma1 = a1.gamma
+                st.session_state.minimax_depth1 = a1.minimax_depth
+                st.session_state.lr2 = a2.lr
+                st.session_state.gamma2 = a2.gamma
+                st.session_state.minimax_depth2 = a2.minimax_depth
+                
+                # Clear old training history as it's no longer relevant
                 st.session_state.training_history = None
-                st.toast("Agent Policies Restored!", icon="")
+                st.toast("Agent Policies Restored!", icon="💾")
                 st.rerun()
 
 train_button = st.sidebar.button(" Begin Training Epochs", 
                                  use_container_width=True, type="primary")
 
 if st.sidebar.button("🧹 Clear All & Reset", use_container_width=True):
-    for key in ['agent1', 'agent2', 'training_history', 'env']:
+    keys_to_clear = ['agent1', 'agent2', 'training_history', 'env', 
+                     'lr1', 'gamma1', 'epsilon_decay1', 'minimax_depth1',
+                     'lr2', 'gamma2', 'epsilon_decay2', 'minimax_depth2',
+                     'grid_size', 'win_length', 'battle_results']
+    for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
     st.cache_data.clear()
