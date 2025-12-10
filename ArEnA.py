@@ -519,53 +519,30 @@ def visualize_board(board, title="Game Board"):
 # Save/Load
 # ============================================================================
 
-# --- ORIGINAL CODE: Lines 395-398 ---
-
-# def serialize_q_table(q_table):
-#     return {str(k): v for k, v in q_table.items()}
-
-# def deserialize_q_table(serialized_q):
-#     return {ast.literal_eval(k): v for k, v in serialized_q.items()}
-
-# --- NEW, More Robust Code ---
-
 def serialize_q_table(q_table):
-    # Keys are (state_tuple, action_tuple). 
-    # We must convert the state tuple (of integers) to a string list/tuple 
-    # but the simplest fix is to just ensure all nested elements are also converted properly.
-    # The existing str(k) should work if 'k' is a simple tuple of tuples of integers.
-    # Let's ensure the keys are handled as a simple list for JSON serialization before str(k).
-    
-    # We will convert the key (state, action) -> ([state_list], [action_list]) 
-    # to guarantee clean JSON serialization.
+    """
+    Serializes a Q-table with tuple keys into a JSON-compatible dictionary.
+    The key `(state_tuple, action_tuple)` is converted to a JSON string.
+    """
     serialized_q = {}
     for (state, action), value in q_table.items():
-        # Key: ( (board state tuple), (action tuple) )
-        # Convert all nested tuples to lists for guaranteed JSON compatibility
-        serializable_key = (list(state), list(action))
-        # Use str() on the serializable key
-        serialized_q[str(serializable_key)] = value
+        # json.dumps creates a standard, parseable string representation of the key.
+        key_str = json.dumps((state, action))
+        serialized_q[key_str] = value
     return serialized_q
 
 def deserialize_q_table(serialized_q):
-    # Reversing the process. The key is now a string representation of a tuple of lists:
-    # '([list of board state ints], [list of action ints])'
-    
-    # 1. Use ast.literal_eval to get the tuple-of-lists back.
-    # 2. Convert the lists back to tuples to match the expected Q-table key format:
-    # (state_tuple, action_tuple)
-    
+    """
+    Deserializes a Q-table from a JSON-compatible dictionary.
+    The string key is parsed back into its original `(state_tuple, action_tuple)` format.
+    """
     deserialized_q = {}
     for k_str, value in serialized_q.items():
-        # k_lists will be a tuple: ([state_list], [action_list])
-        k_lists = ast.literal_eval(k_str) 
-        
-        # Convert inner lists back to tuples
-        state_tuple = tuple(k_lists[0])
-        action_tuple = tuple(k_lists[1])
-        
-        # New Q-table key is (state_tuple, action_tuple)
-        deserialized_q[(state_tuple, action_tuple)] = value
+        # json.loads parses the string back into a list of lists.
+        key_as_list = json.loads(k_str)
+        # Convert the lists back to the required tuple format for the Q-table key.
+        deserialized_key = (tuple(key_as_list[0]), tuple(key_as_list[1]))
+        deserialized_q[deserialized_key] = value
     return deserialized_q
 
 def create_agents_zip(agent1, agent2, config):
