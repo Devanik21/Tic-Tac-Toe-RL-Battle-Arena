@@ -14,18 +14,17 @@ from copy import deepcopy
 # Page Config and Initial Setup
 # ============================================================================
 st.set_page_config(
-    page_title="AGI Tic-Tac-Toe Battle",
+    page_title="Strategic RL Tic-Tac-Toe",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🧠"
+    page_icon="♾️"
 )
 
-st.title("🧠 AGI-Level Tic-Tac-Toe Battle Arena")
+st.title("Strategic Tic-Tac-Toe RL Arena")
 st.markdown("""
-Watch two **AGI-level** Reinforcement Learning agents with **advanced reasoning** battle and evolve!
+Observe two Reinforcement Learning agents, equipped with sophisticated strategic algorithms, as they compete and refine their policies.
 
-**AGI Enhancements:**
-- 🎯 **Monte Carlo Tree Search (MCTS)** - Lookahead planning
+**Core Algorithmic Components:**
 - 🧮 **Minimax with Alpha-Beta Pruning** - Strategic depth
 - 🎓 **Multi-step reward shaping** - Understanding long-term strategy
 - 🔮 **Position evaluation heuristics** - Board state understanding
@@ -151,7 +150,7 @@ class TicTacToe:
 # AGI-Level RL Agent with Strict Logic Hierarchy
 # ============================================================================
 
-class AGIAgent:
+class StrategicAgent:
     def __init__(self, player_id, lr=0.2, gamma=0.99, epsilon=1.0, 
                  epsilon_decay=0.995, epsilon_min=0.01):
         self.player_id = player_id
@@ -181,7 +180,7 @@ class AGIAgent:
         if not available_actions: return None
         
         # ---------------------------------------------------------
-        # AGI HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (The "Reflex")
+        # HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (Tactical Reflex)
         # ---------------------------------------------------------
         # Check for instant win
         for action in available_actions:
@@ -197,7 +196,7 @@ class AGIAgent:
                 return action # Block immediately
         
         # ---------------------------------------------------------
-        # AGI HIERARCHY LEVEL 2: STRATEGIC THINKING (Minimax)
+        # HIERARCHY LEVEL 2: STRATEGIC PLANNING (Minimax)
         # ---------------------------------------------------------
         # If training and high epsilon, explore randomly occasionally
         if training and random.random() < self.epsilon:
@@ -298,7 +297,7 @@ class AGIAgent:
 # ============================================================================
 
 def play_game(env, agent1, agent2, training=True):
-    """Play one complete game between two AGI agents"""
+    """Play one complete game between two strategic agents"""
     env.reset()
     game_history = []
     
@@ -439,14 +438,14 @@ def load_agents_from_zip(uploaded_file):
             agent2_state = json.loads(zf.read("agent2.json"))
             config = json.loads(zf.read("config.json"))
             
-            agent1 = AGIAgent(1, agent1_state['lr'], agent1_state['gamma'])
+            agent1 = StrategicAgent(1, agent1_state['lr'], agent1_state['gamma'])
             agent1.q_table = deserialize_q_table(agent1_state['q_table'])
             agent1.epsilon = agent1_state['epsilon']
             agent1.wins = agent1_state['wins']
             agent1.losses = agent1_state['losses']
             agent1.draws = agent1_state['draws']
             
-            agent2 = AGIAgent(2, agent2_state['lr'], agent2_state['gamma'])
+            agent2 = StrategicAgent(2, agent2_state['lr'], agent2_state['gamma'])
             agent2.q_table = deserialize_q_table(agent2_state['q_table'])
             agent2.epsilon = agent2_state['epsilon']
             agent2.wins = agent2_state['wins']
@@ -462,7 +461,7 @@ def load_agents_from_zip(uploaded_file):
 # Streamlit UI
 # ============================================================================
 
-st.sidebar.header("🧠 AGI Arena Controls")
+st.sidebar.header("🧠 Simulation Controls")
 
 with st.sidebar.expander("1. Game Configuration", expanded=True):
     grid_size = st.slider("Grid Size", 3, 10, 3)
@@ -471,13 +470,13 @@ with st.sidebar.expander("1. Game Configuration", expanded=True):
     win_length = st.slider("Win Length (in-a-row)", 3, max_win_length, default_win)
     st.info(f"Playing on {grid_size}×{grid_size} grid, need {win_length} in a row to win")
 
-with st.sidebar.expander("2. AGI Agent 1 (Blue X)", expanded=True):
+with st.sidebar.expander("2. Agent 1 (Blue X) Parameters", expanded=True):
     lr1 = st.slider("Learning Rate α₁", 0.01, 1.0, 0.2, 0.01)
     gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
     epsilon_decay1 = st.slider("Epsilon Decay₁", 0.99, 0.9999, 0.998, 0.0001, format="%.4f")
     minimax_depth1 = st.slider("Minimax Depth₁", 1, 5, 3)
 
-with st.sidebar.expander("3. AGI Agent 2 (Red O)", expanded=True):
+with st.sidebar.expander("3. Agent 2 (Red O) Parameters", expanded=True):
     lr2 = st.slider("Learning Rate α₂", 0.01, 1.0, 0.2, 0.01)
     gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
     epsilon_decay2 = st.slider("Epsilon Decay₂", 0.99, 0.9999, 0.998, 0.0001, format="%.4f")
@@ -493,18 +492,18 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
         zip_buffer = create_agents_zip(st.session_state.agent1, 
                                        st.session_state.agent2, config)
         st.download_button(
-            label="💾 Download AGI Brains",
+            label="💾 Download Agent Policies",
             data=zip_buffer,
             file_name="agi_agents.zip",
             mime="application/zip",
             use_container_width=True
         )
     else:
-        st.warning("Train agents first to download.")
+        st.warning("Train agents first to download policies.")
     
-    uploaded_file = st.file_uploader("Upload AGI Brains (.zip)", type="zip")
+    uploaded_file = st.file_uploader("Upload Agent Policies (.zip)", type="zip")
     if uploaded_file is not None:
-        if st.button("Load AGI Agents", use_container_width=True):
+        if st.button("Load Agent Policies", use_container_width=True):
             a1, a2, cfg = load_agents_from_zip(uploaded_file)
             if a1:
                 st.session_state.agent1 = a1
@@ -512,10 +511,10 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
                 st.session_state.agent1.minimax_depth = minimax_depth1
                 st.session_state.agent2.minimax_depth = minimax_depth2
                 st.session_state.training_history = None
-                st.toast("AGI Agents Restored!", icon="🧠")
+                st.toast("Agent Policies Restored!", icon="🧠")
                 st.rerun()
 
-train_button = st.sidebar.button("🚀 Start AGI Training", 
+train_button = st.sidebar.button("🚀 Begin Training Epochs", 
                                  use_container_width=True, type="primary")
 
 if st.sidebar.button("🧹 Clear All & Reset", use_container_width=True):
@@ -523,7 +522,7 @@ if st.sidebar.button("🧹 Clear All & Reset", use_container_width=True):
         if key in st.session_state:
             del st.session_state[key]
     st.cache_data.clear()
-    st.toast("AGI Arena Reset!", icon="🧹")
+    st.toast("Simulation Arena Reset!", icon="🧹")
     st.rerun()
 
 # ============================================================================
@@ -540,9 +539,9 @@ if env.grid_size != grid_size or env.win_length != win_length:
     env = st.session_state.env
 
 if 'agent1' not in st.session_state:
-    st.session_state.agent1 = AGIAgent(1, lr1, gamma1, epsilon_decay=epsilon_decay1)
+    st.session_state.agent1 = StrategicAgent(1, lr1, gamma1, epsilon_decay=epsilon_decay1)
     st.session_state.agent1.minimax_depth = minimax_depth1
-    st.session_state.agent2 = AGIAgent(2, lr2, gamma2, epsilon_decay=epsilon_decay2)
+    st.session_state.agent2 = StrategicAgent(2, lr2, gamma2, epsilon_decay=epsilon_decay2)
     st.session_state.agent2.minimax_depth = minimax_depth2
 
 agent1 = st.session_state.agent1
@@ -556,14 +555,14 @@ agent2.minimax_depth = minimax_depth2
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("🧠 AGI Agent 1 (Blue X)", 
+    st.metric("🧠 Agent 1 (Blue X)", 
              f"Q-States: {len(agent1.q_table)}", 
              f"ε={agent1.epsilon:.4f}")
     st.metric("Wins", agent1.wins, delta_color="normal")
     st.caption(f"Minimax Depth: {agent1.minimax_depth}")
 
 with col2:
-    st.metric("🧠 AGI Agent 2 (Red O)", 
+    st.metric("🧠 Agent 2 (Red O)", 
              f"Q-States: {len(agent2.q_table)}", 
              f"ε={agent2.epsilon:.4f}")
     st.metric("Wins", agent2.wins, delta_color="normal")
@@ -632,7 +631,7 @@ with st.expander("🔬 Quick Analysis & Head-to-Head Battles", expanded=False):
 
 # Training section
 if train_button:
-    st.subheader("🧠 AGI Training in Progress...")
+    st.subheader("🧠 Training Epochs in Progress...")
     
     status_container = st.empty()
     progress_bar = st.progress(0)
@@ -681,7 +680,7 @@ if train_button:
             status_container.markdown(status_table)
 
     progress_bar.progress(1.0)
-    st.toast("AGI Training Complete!", icon="🎉")
+    st.toast("Training Complete!", icon="🎉")
     
     st.session_state.training_history = history
     # --- FIX START: Persist the updated agents in session state after training ---
