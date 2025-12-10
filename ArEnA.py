@@ -522,7 +522,7 @@ def load_agents_from_zip(uploaded_file):
 # Streamlit UI
 # ============================================================================
 
-st.sidebar.header("🧠 Simulation Controls")
+st.sidebar.header(" Simulation Controls")
 
 with st.sidebar.expander("1. Game Configuration", expanded=True):
     grid_size = st.slider("Grid Size", 3, 10, 3)
@@ -572,10 +572,10 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
                 st.session_state.agent1.minimax_depth = minimax_depth1
                 st.session_state.agent2.minimax_depth = minimax_depth2
                 st.session_state.training_history = None
-                st.toast("Agent Policies Restored!", icon="🧠")
+                st.toast("Agent Policies Restored!", icon="")
                 st.rerun()
 
-train_button = st.sidebar.button("🚀 Begin Training Epochs", 
+train_button = st.sidebar.button(" Begin Training Epochs", 
                                  use_container_width=True, type="primary")
 
 if st.sidebar.button("🧹 Clear All & Reset", use_container_width=True):
@@ -616,14 +616,14 @@ agent2.minimax_depth = minimax_depth2
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("🧠 Agent 1 (Blue X)", 
+    st.metric(" Agent 1 (Blue X)", 
              f"Q-States: {len(agent1.q_table)}", 
              f"ε={agent1.epsilon:.4f}")
     st.metric("Wins", agent1.wins, delta_color="normal")
     st.caption(f"Minimax Depth: {agent1.minimax_depth}")
 
 with col2:
-    st.metric("🧠 Agent 2 (Red O)", 
+    st.metric(" Agent 2 (Red O)", 
              f"Q-States: {len(agent2.q_table)}", 
              f"ε={agent2.epsilon:.4f}")
     st.metric("Wins", agent2.wins, delta_color="normal")
@@ -692,7 +692,7 @@ with st.expander("🔬 Quick Analysis & Head-to-Head Battles", expanded=False):
 
 # Training section
 if train_button:
-    st.subheader("🧠 Training Epochs in Progress...")
+    st.subheader(" Training Epochs in Progress...")
     
     status_container = st.empty()
     progress_bar = st.progress(0)
@@ -782,7 +782,7 @@ if 'training_history' in st.session_state and st.session_state.training_history:
     q_chart_data = df[['episode', 'agent1_q_size', 'agent2_q_size']].set_index('episode')
     st.line_chart(q_chart_data)
 
-    st.subheader("🤖 Final Battle: Trained Agents")
+    st.subheader(" Final Battle: Trained Agents")
     st.info("Watch the fully trained agents play one final, decisive game against each other (no exploration).")
 
     if st.button("⚔️ Watch Them Battle!", use_container_width=True):
