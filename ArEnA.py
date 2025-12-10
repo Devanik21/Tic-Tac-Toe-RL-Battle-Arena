@@ -521,29 +521,44 @@ def visualize_board(board, title="Game Board"):
 
 def serialize_q_table(q_table):
     """
-    Serializes a Q-table with tuple keys into a JSON-compatible dictionary.
-    The key `(state_tuple, action_tuple)` is converted to a JSON string.
+    Serializes a Q-table, converting all NumPy types to Python native types 
+    to prevent JSON serialization errors.
     """
     serialized_q = {}
     for (state, action), value in q_table.items():
-        # json.dumps creates a standard, parseable string representation of the key.
-        key_str = json.dumps((state, action))
-        serialized_q[key_str] = value
+        # Force conversion of state elements (numpy.int64) to python int
+        state_list = [int(x) for x in state]
+        
+        # Force conversion of action elements to python int
+        action_list = [int(x) for x in action]
+        
+        # Create the key string
+        key_str = json.dumps((state_list, action_list))
+        
+        # Ensure the Q-value is a python float
+        serialized_q[key_str] = float(value)
+        
     return serialized_q
 
 def deserialize_q_table(serialized_q):
     """
     Deserializes a Q-table from a JSON-compatible dictionary.
-    The string key is parsed back into its original `(state_tuple, action_tuple)` format.
+    Parses the string key back into (state_tuple, action_tuple).
     """
     deserialized_q = {}
     for k_str, value in serialized_q.items():
-        # json.loads parses the string back into a list of lists.
+        # Parse the string "[ [0,0...], [1,1] ]" back to lists
         key_as_list = json.loads(k_str)
-        # Convert the lists back to the required tuple format for the Q-table key.
-        deserialized_key = (tuple(key_as_list[0]), tuple(key_as_list[1]))
-        deserialized_q[deserialized_key] = value
+        
+        # Convert lists back to tuples so they can be dictionary keys
+        state_tuple = tuple(key_as_list[0])
+        action_tuple = tuple(key_as_list[1])
+        
+        deserialized_q[(state_tuple, action_tuple)] = value
+        
     return deserialized_q
+
+
 
 def create_agents_zip(agent1, agent2, config):
     agent1_state = {
@@ -582,21 +597,28 @@ def load_agents_from_zip(uploaded_file):
             agent2_state = json.loads(zf.read("agent2.json"))
             config = json.loads(zf.read("config.json"))
             
-            agent1 = StrategicAgent(1, agent1_state['lr'], agent1_state['gamma'])
+            # Reconstruct Agent 1
+            agent1 = StrategicAgent(1, 
+                                    config.get('lr1', 0.2), 
+                                    config.get('gamma1', 0.95))
             agent1.q_table = deserialize_q_table(agent1_state['q_table'])
-            agent1.epsilon = agent1_state['epsilon']
-            agent1.wins = agent1_state['wins']
-            agent1.losses = agent1_state['losses']
-            agent1.draws = agent1_state['draws']
+            agent1.epsilon = agent1_state.get('epsilon', 0.0)
+            agent1.wins = agent1_state.get('wins', 0)
+            agent1.losses = agent1_state.get('losses', 0)
+            agent1.draws = agent1_state.get('draws', 0)
             
-            agent2 = StrategicAgent(2, agent2_state['lr'], agent2_state['gamma'])
+            # Reconstruct Agent 2
+            agent2 = StrategicAgent(2, 
+                                    config.get('lr2', 0.2), 
+                                    config.get('gamma2', 0.95))
             agent2.q_table = deserialize_q_table(agent2_state['q_table'])
-            agent2.epsilon = agent2_state['epsilon']
-            agent2.wins = agent2_state['wins']
-            agent2.losses = agent2_state['losses']
-            agent2.draws = agent2_state['draws']
+            agent2.epsilon = agent2_state.get('epsilon', 0.0)
+            agent2.wins = agent2_state.get('wins', 0)
+            agent2.losses = agent2_state.get('losses', 0)
+            agent2.draws = agent2_state.get('draws', 0)
             
             return agent1, agent2, config
+            
     except Exception as e:
         st.error(f"Failed to load agents: {e}")
         return None, None, None
