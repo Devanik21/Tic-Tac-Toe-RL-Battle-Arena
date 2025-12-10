@@ -106,7 +106,10 @@ class TicTacToe:
         return False
     
     def evaluate_position(self, player):
-        """God-Mode Heuristic: Values Center, Corners, and Lines"""
+        """
+        Advanced Heuristic: 
+        Includes 'Iron Wall' defense for Player 2 on large grids to counter First-Mover Advantage.
+        """
         if self.winner == player: return 100000
         if self.winner == (3 - player): return -100000
         if self.game_over: return 0  # Draw
@@ -114,23 +117,53 @@ class TicTacToe:
         opponent = 3 - player
         score = 0
         
+        # --- STRATEGY CONFIGURATION ---
+        # If we are Player 2 (Red) on a large board (>3), we must be paranoid.
+        # We assume Blue is playing perfectly, so we prioritize blocking over building.
+        is_large_grid = self.grid_size > 3
+        is_defensive_agent = (player == 2)
+        
+        # Weights
+        center_weight = 50
+        corner_weight = 10
+        
+        if is_large_grid and is_defensive_agent:
+            # IRON WALL MODE: Extreme defensive weights
+            threat_2_weight = 200    # Huge fear of opponent having 2-in-a-row
+            threat_win_minus_1 = 5000 # Absolute panic if opponent is 1 move from win
+            my_attack_weight = 20     # Low priority on my own attacks
+        else:
+            # Standard Balanced Mode
+            threat_2_weight = 60
+            threat_win_minus_1 = 1000
+            my_attack_weight = 50
+
         # 1. Control the center (Crucial for defense)
         center = self.grid_size // 2
-        if self.board[center, center] == player: score += 50
-        elif self.board[center, center] == opponent: score -= 50
+        # On even grids (4x4), there are 4 center tiles. Check them all.
+        if self.grid_size % 2 == 0:
+            centers = [(center-1, center-1), (center-1, center), (center, center-1), (center, center)]
+            for r, c in centers:
+                if self.board[r, c] == player: score += center_weight
+                elif self.board[r, c] == opponent: score -= center_weight
+        else:
+            if self.board[center, center] == player: score += center_weight
+            elif self.board[center, center] == opponent: score -= center_weight
         
-        # 2. Control corners (Crucial for traps)
+        # 2. Control corners
         corners = [(0,0), (0, self.grid_size-1), (self.grid_size-1, 0), (self.grid_size-1, self.grid_size-1)]
         for r,c in corners:
-            if self.board[r,c] == player: score += 10
-            elif self.board[r,c] == opponent: score -= 10
+            if self.board[r,c] == player: score += corner_weight
+            elif self.board[r,c] == opponent: score -= corner_weight
 
-        # 3. Line Counting (Threats)
-        # We value having "2 in a row" much higher to encourage building traps
-        score += self._count_lines(player, 2) * 50
-        score -= self._count_lines(opponent, 2) * 60 # Defensive paranoia: fear opponent more
-        score += self._count_lines(player, self.win_length - 1) * 500
-        score -= self._count_lines(opponent, self.win_length - 1) * 1000
+        # 3. Line Counting (The Threat Assessment)
+        # My potential lines
+        score += self._count_lines(player, 2) * my_attack_weight
+        score += self._count_lines(player, self.win_length - 1) * (my_attack_weight * 10)
+        
+        # Opponent threats (The Defense)
+        score -= self._count_lines(opponent, 2) * threat_2_weight
+        score -= self._count_lines(opponent, self.win_length - 1) * threat_win_minus_1
         
         return score
 
@@ -180,7 +213,7 @@ class StrategicAgent:
         if not available_actions: return None
         
         # ---------------------------------------------------------
-        # HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (Tactical Reflex)
+        # HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (Reflex)
         # ---------------------------------------------------------
         # Check for instant win
         for action in available_actions:
@@ -198,16 +231,24 @@ class StrategicAgent:
         # ---------------------------------------------------------
         # HIERARCHY LEVEL 2: STRATEGIC PLANNING (Minimax)
         # ---------------------------------------------------------
-        # If training and high epsilon, explore randomly occasionally
         if training and random.random() < self.epsilon:
             return random.choice(available_actions)
 
-        # Dynamic Depth: Play perfect on small boards, heuristic on large
+        # Dynamic Depth Logic
         empty_spots = len(available_actions)
+        
+        # ASYMMETRIC DEPTH: 
+        # On large boards, the Second Player (Defensive) needs to think deeper
+        # to counter the First Mover Advantage.
+        depth_bonus = 0
+        if env.grid_size > 3 and self.player_id == 2:
+            depth_bonus = 1 # Red thinks harder!
+            
         if env.grid_size == 3:
             current_depth = 9 # God mode for 3x3
         else:
-            current_depth = min(self.minimax_depth, empty_spots)
+            # Ensure we don't exceed empty spots, add bonus for Red
+            current_depth = min(self.minimax_depth + depth_bonus, empty_spots)
 
         best_score = -float('inf')
         best_actions = []
@@ -215,6 +256,11 @@ class StrategicAgent:
         # Alpha-Beta Pruning Search
         alpha = -float('inf')
         beta = float('inf')
+
+        # Optimization: Sort actions by center proximity to improve pruning
+        # (Moves near center are usually better, checking them first prunes more branches)
+        center = env.grid_size // 2
+        available_actions.sort(key=lambda x: abs(x[0]-center) + abs(x[1]-center))
 
         for action in available_actions:
             sim_env = self._simulate_move(env, action, self.player_id)
