@@ -707,7 +707,8 @@ if train_button:
         'agent1_epsilon': [],
         'agent2_epsilon': [],
         'agent1_q_size': [],
-        'agent2_q_size': []
+        'agent2_q_size': [],
+        'episode': []
     }
     
     for episode in range(1, episodes + 1):
@@ -724,6 +725,7 @@ if train_button:
             history['agent2_epsilon'].append(agent2.epsilon)
             history['agent1_q_size'].append(len(agent1.q_table))
             history['agent2_q_size'].append(len(agent2.q_table))
+            history['episode'].append(episode)
 
             progress = episode / episodes
             progress_bar.progress(progress)
@@ -750,13 +752,19 @@ if train_button:
     # --- FIX END ---
 
 # Display charts and final game if training has occurred
+# Display charts and final game if training has occurred
 if 'training_history' in st.session_state and st.session_state.training_history:
     st.subheader("📈 Training Performance Analysis")
     history = st.session_state.training_history
     
     df = pd.DataFrame(history)
-    # Create an 'episode' column for the x-axis of the charts
-    df['episode'] = range(update_freq, episodes + 1, update_freq)
+    
+    # --- FIX START ---
+    # We no longer manually calculate 'range()'. We use the saved 'episode' column.
+    # If old data exists without 'episode', we create a safe fallback to prevent crashes.
+    if 'episode' not in df.columns:
+        df['episode'] = range(1, len(df) + 1)
+    # --- FIX END ---
     
     chart_col1, chart_col2 = st.columns(2)
     
