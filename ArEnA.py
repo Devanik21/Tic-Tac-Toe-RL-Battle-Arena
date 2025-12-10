@@ -665,11 +665,21 @@ with st.sidebar.expander("4. Training Configuration", expanded=True):
 
 with st.sidebar.expander("5. Brain Storage", expanded=False):
     if 'agent1' in st.session_state and st.session_state.agent1 is not None:
-        config = {"grid_size": grid_size, "win_length": win_length}
+        # --- ENHANCEMENT: Gather all session data for a complete snapshot ---
+        config = {
+            "grid_size": grid_size, 
+            "win_length": win_length,
+            "lr1": lr1, "gamma1": gamma1, "epsilon_decay1": epsilon_decay1, "minimax_depth1": minimax_depth1,
+            "lr2": lr2, "gamma2": gamma2, "epsilon_decay2": epsilon_decay2, "minimax_depth2": minimax_depth2,
+            "training_history": st.session_state.get('training_history'),
+            "battle_results": st.session_state.get('battle_results')
+        }
+        # --- END ENHANCEMENT ---
+
         zip_buffer = create_agents_zip(st.session_state.agent1, 
                                        st.session_state.agent2, config)
         st.download_button(
-            label="💾 Download Agent Policies",
+            label="💾 Download Session Snapshot",
             data=zip_buffer,
             file_name="agi_agents.zip",
             mime="application/zip",
@@ -678,26 +688,32 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
     else:
         st.warning("Train agents first to download policies.")
     
-    uploaded_file = st.file_uploader("Upload Agent Policies (.zip)", type="zip")
+    uploaded_file = st.file_uploader("Upload Session Snapshot (.zip)", type="zip")
     if uploaded_file is not None:
-        if st.button("Load Agent Policies", use_container_width=True):
+        if st.button("Load Session", use_container_width=True):
             a1, a2, cfg = load_agents_from_zip(uploaded_file)
             if a1:
                 st.session_state.agent1 = a1
                 st.session_state.agent2 = a2
-                # Restore config and agent parameters to the UI
+                
+                # --- ENHANCEMENT: Restore the entire session state from the loaded file ---
                 st.session_state.grid_size = cfg.get("grid_size", 3)
                 st.session_state.win_length = cfg.get("win_length", 3)
-                st.session_state.lr1 = a1.lr
-                st.session_state.gamma1 = a1.gamma
-                st.session_state.minimax_depth1 = a1.minimax_depth
-                st.session_state.lr2 = a2.lr
-                st.session_state.gamma2 = a2.gamma
-                st.session_state.minimax_depth2 = a2.minimax_depth
+                st.session_state.lr1 = cfg.get("lr1", a1.lr)
+                st.session_state.gamma1 = cfg.get("gamma1", a1.gamma)
+                st.session_state.epsilon_decay1 = cfg.get("epsilon_decay1", 0.998)
+                st.session_state.minimax_depth1 = cfg.get("minimax_depth1", a1.minimax_depth)
+                st.session_state.lr2 = cfg.get("lr2", a2.lr)
+                st.session_state.gamma2 = cfg.get("gamma2", a2.gamma)
+                st.session_state.epsilon_decay2 = cfg.get("epsilon_decay2", 0.998)
+                st.session_state.minimax_depth2 = cfg.get("minimax_depth2", a2.minimax_depth)
                 
-                # Clear old training history as it's no longer relevant
-                st.session_state.training_history = None
-                st.toast("Agent Policies Restored!", icon="💾")
+                # Restore dashboard metrics
+                st.session_state.training_history = cfg.get("training_history")
+                st.session_state.battle_results = cfg.get("battle_results")
+                # --- END ENHANCEMENT ---
+
+                st.toast("Session Snapshot Restored!", icon="💾")
                 st.rerun()
 
 train_button = st.sidebar.button(" Begin Training Epochs", 
