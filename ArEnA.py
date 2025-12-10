@@ -213,7 +213,7 @@ class StrategicAgent:
         if not available_actions: return None
         
         # ---------------------------------------------------------
-        # HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (Reflex)
+        # HIERARCHY LEVEL 1: IMMEDIATE SURVIVAL (Tactical Reflex)
         # ---------------------------------------------------------
         # Check for instant win
         for action in available_actions:
@@ -227,40 +227,55 @@ class StrategicAgent:
             sim = self._simulate_move(env, action, opponent)
             if sim.winner == opponent:
                 return action # Block immediately
-        
+
+        # ---------------------------------------------------------
+        # HIERARCHY LEVEL 1.5: OPENING BOOK (Grandmaster Knowledge)
+        # ---------------------------------------------------------
+        # FIX: On large boards, Red often loses by playing passively on edges.
+        # We force Red to fight for the "Center Control" immediately.
+        if env.grid_size > 3 and self.player_id == 2 and len(env.move_history) <= 2:
+            # Define the critical center zone (middle 2x2 for 4x4)
+            center_mask = []
+            mid = env.grid_size // 2
+            # Critical spots: The central intersection
+            critical_spots = [
+                (mid-1, mid-1), (mid-1, mid), 
+                (mid, mid-1),   (mid, mid)
+            ]
+            
+            # Find which critical spots are free
+            valid_center_moves = [pos for pos in critical_spots if pos in available_actions]
+            
+            # If any center spot is open, TAKE IT. Do not calculate, just act.
+            if valid_center_moves:
+                return random.choice(valid_center_moves)
+
         # ---------------------------------------------------------
         # HIERARCHY LEVEL 2: STRATEGIC PLANNING (Minimax)
         # ---------------------------------------------------------
         if training and random.random() < self.epsilon:
             return random.choice(available_actions)
 
-        # Dynamic Depth Logic
+        # Dynamic Depth & Asymmetric Boost
         empty_spots = len(available_actions)
-        
-        # ASYMMETRIC DEPTH: 
-        # On large boards, the Second Player (Defensive) needs to think deeper
-        # to counter the First Mover Advantage.
         depth_bonus = 0
         if env.grid_size > 3 and self.player_id == 2:
             depth_bonus = 1 # Red thinks harder!
             
         if env.grid_size == 3:
-            current_depth = 9 # God mode for 3x3
+            current_depth = 9 
         else:
-            # Ensure we don't exceed empty spots, add bonus for Red
             current_depth = min(self.minimax_depth + depth_bonus, empty_spots)
 
         best_score = -float('inf')
         best_actions = []
 
-        # Alpha-Beta Pruning Search
-        alpha = -float('inf')
-        beta = float('inf')
-
-        # Optimization: Sort actions by center proximity to improve pruning
-        # (Moves near center are usually better, checking them first prunes more branches)
+        # Optimization: Check center moves first for better pruning
         center = env.grid_size // 2
         available_actions.sort(key=lambda x: abs(x[0]-center) + abs(x[1]-center))
+
+        alpha = -float('inf')
+        beta = float('inf')
 
         for action in available_actions:
             sim_env = self._simulate_move(env, action, self.player_id)
