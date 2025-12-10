@@ -648,8 +648,8 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
             "win_length": win_length,
             "lr1": lr1, "gamma1": gamma1, "epsilon_decay1": epsilon_decay1, "minimax_depth1": minimax_depth1,
             "lr2": lr2, "gamma2": gamma2, "epsilon_decay2": epsilon_decay2, "minimax_depth2": minimax_depth2,
-            "training_history": st.session_state.get('training_history'),
-            "battle_results": st.session_state.get('battle_results')
+            "training_history": st.session_state.get('training_history', None),
+            "battle_results": st.session_state.get('battle_results', None)
         }
         # --- END ENHANCEMENT ---
 
@@ -686,8 +686,8 @@ with st.sidebar.expander("5. Brain Storage", expanded=False):
                 st.session_state.minimax_depth2 = cfg.get("minimax_depth2", a2.minimax_depth)
                 
                 # Restore dashboard metrics
-                st.session_state.training_history = cfg.get("training_history")
-                st.session_state.battle_results = cfg.get("battle_results")
+                st.session_state.training_history = cfg.get("training_history", None)
+                st.session_state.battle_results = cfg.get("battle_results", None)
                 # --- END ENHANCEMENT ---
 
                 st.toast("Session Snapshot Restored!", icon="💾")
