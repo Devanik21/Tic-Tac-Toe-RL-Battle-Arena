@@ -118,9 +118,8 @@ class TicTacToe:
         score = 0
         
         # --- STRATEGY CONFIGURATION ---
-        # If we are Player 2 (Red) on a large board (>3), we must be paranoid.
-        # We assume Blue is playing perfectly, so we prioritize blocking over building.
         is_large_grid = self.grid_size > 3
+        # If I am Player 2 (Red), I must play defensively
         is_defensive_agent = (player == 2)
         
         # Weights
@@ -129,27 +128,35 @@ class TicTacToe:
         
         if is_large_grid and is_defensive_agent:
             # IRON WALL MODE: Extreme defensive weights
-            threat_2_weight = 200    # Huge fear of opponent having 2-in-a-row
-            threat_win_minus_1 = 5000 # Absolute panic if opponent is 1 move from win
-            my_attack_weight = 20     # Low priority on my own attacks
+            threat_2_weight = 400     # DOUBLED: Huge fear of opponent having 2-in-a-row
+            threat_win_minus_1 = 8000 # INCREASED: Absolute panic if opponent is 1 move from win
+            my_attack_weight = 10     # REDUCED: Don't get greedy, just block
+            center_control_penalty = 200 # NEW: Penalty if opponent owns center
         else:
             # Standard Balanced Mode
             threat_2_weight = 60
             threat_win_minus_1 = 1000
             my_attack_weight = 50
+            center_control_penalty = 50
 
         # 1. Control the center (Crucial for defense)
         center = self.grid_size // 2
         # On even grids (4x4), there are 4 center tiles. Check them all.
+        centers = []
         if self.grid_size % 2 == 0:
             centers = [(center-1, center-1), (center-1, center), (center, center-1), (center, center)]
-            for r, c in centers:
-                if self.board[r, c] == player: score += center_weight
-                elif self.board[r, c] == opponent: score -= center_weight
         else:
-            if self.board[center, center] == player: score += center_weight
-            elif self.board[center, center] == opponent: score -= center_weight
-        
+            centers = [(center, center)]
+
+        for r, c in centers:
+            if self.board[r, c] == player: 
+                score += center_weight
+            elif self.board[r, c] == opponent: 
+                score -= center_weight
+                # Extra penalty for Red if Blue owns the center
+                if is_defensive_agent:
+                    score -= center_control_penalty
+
         # 2. Control corners
         corners = [(0,0), (0, self.grid_size-1), (self.grid_size-1, 0), (self.grid_size-1, self.grid_size-1)]
         for r,c in corners:
@@ -229,24 +236,51 @@ class StrategicAgent:
                 return action # Block immediately
 
         # ---------------------------------------------------------
+        # ---------------------------------------------------------
         # HIERARCHY LEVEL 1.5: OPENING BOOK (Grandmaster Knowledge)
         # ---------------------------------------------------------
-        # FIX: On large boards, Red often loses by playing passively on edges.
-        # We force Red to fight for the "Center Control" immediately.
-        if env.grid_size > 3 and self.player_id == 2 and len(env.move_history) <= 2:
-            # Define the critical center zone (middle 2x2 for 4x4)
-            center_mask = []
-            mid = env.grid_size // 2
-            # Critical spots: The central intersection
-            critical_spots = [
-                (mid-1, mid-1), (mid-1, mid), 
-                (mid, mid-1),   (mid, mid)
-            ]
+        # FIX: On large boards, if Blue takes center, Red must play ADJACENT to it.
+        if env.grid_size > 3 and self.player_id == 2 and len(env.move_history) <= 3:
+            center = env.grid_size // 2
             
-            # Find which critical spots are free
-            valid_center_moves = [pos for pos in critical_spots if pos in available_actions]
+            # Identify the critical center zone
+            if env.grid_size % 2 == 1:
+                critical_center = [(center, center)]
+            else:
+                critical_center = [(center-1, center-1), (center-1, center), 
+                                   (center, center-1), (center, center)]
             
-            # If any center spot is open, TAKE IT. Do not calculate, just act.
+            # Check if Opponent (Blue) occupies any critical center spot
+            opponent_holds_center = False
+            occupied_center = None
+            for r, c in critical_center:
+                if env.board[r, c] == (3 - self.player_id):
+                    opponent_holds_center = True
+                    occupied_center = (r, c)
+                    break
+            
+            # If Blue has center, Red acts defensively
+            if opponent_holds_center:
+                # Find valid neighbors to the occupied center spot
+                r, c = occupied_center
+                neighbors = [
+                    (r-1, c-1), (r-1, c), (r-1, c+1),
+                    (r, c-1),             (r, c+1),
+                    (r+1, c-1), (r+1, c), (r+1, c+1)
+                ]
+                # Filter strictly for empty spots on board
+                valid_counters = [
+                    (nr, nc) for nr, nc in neighbors 
+                    if 0 <= nr < env.grid_size and 0 <= nc < env.grid_size 
+                    and env.board[nr, nc] == 0
+                ]
+                
+                if valid_counters:
+                    # Pick a random valid counter-move (adds variety but keeps safety)
+                    return random.choice(valid_counters)
+            
+            # If center is free, TAKE IT (Old logic)
+            valid_center_moves = [pos for pos in critical_center if pos in available_actions]
             if valid_center_moves:
                 return random.choice(valid_center_moves)
 
