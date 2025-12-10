@@ -322,7 +322,7 @@ class StrategicAgent:
         # Dynamic Depth & Asymmetric Boost
         empty_spots = len(available_actions)
         depth_bonus = 0
-        if env.grid_size > 3 and self.player_id == 2:
+        if env.grid_size > 1 and self.player_id == 2:
             depth_bonus = 2 # Red thinks harder!
             
         if env.grid_size == 3:
