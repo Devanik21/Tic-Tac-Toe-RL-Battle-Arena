@@ -588,7 +588,7 @@ def load_agents_from_zip(uploaded_file):
 st.sidebar.header(" Simulation Controls")
 
 with st.sidebar.expander("1. Game Configuration", expanded=True):
-    grid_size = st.slider("Grid Size", 3, 10, 3)
+    grid_size = st.slider("Grid Size", 3, 5, 3)
     max_win_length = max(grid_size, 4)
     default_win = min(grid_size, 3)
     win_length = st.slider("Win Length (in-a-row)", 3, max_win_length, default_win)
