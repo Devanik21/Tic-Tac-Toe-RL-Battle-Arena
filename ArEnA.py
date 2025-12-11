@@ -957,7 +957,7 @@ else:
 
 
 # ============================================================================
-# 🎮 NEW SECTION: Human vs. AI Arena (Styled)
+# 🎮 NEW SECTION: Human vs. AI Arena (Styled & Crash-Proof)
 # ============================================================================
 
 st.markdown("---")
@@ -968,18 +968,17 @@ st.markdown("""
 <style>
     /* 1. Style the buttons (Empty Spots) */
     div.stButton > button:first-child {
-        background-color: #262730; /* Dark Paper background */
+        background-color: #262730; 
         color: #ffffff;
-        border: 2px solid #4a4a4a; /* Subtle border */
+        border: 2px solid #4a4a4a; 
         border-radius: 8px;
-        height: 80px; /* Fixed height for square look */
+        height: 80px; 
         width: 100%;
         font-size: 24px;
         transition: all 0.3s ease;
     }
-    
     div.stButton > button:first-child:hover {
-        border-color: #00ffcc; /* Neon hover effect */
+        border-color: #00ffcc; 
         background-color: #363945;
         box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
     }
@@ -989,20 +988,18 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 80px; /* Match button height */
+        height: 80px; 
         border-radius: 8px;
         font-size: 40px;
         font-weight: bold;
-        background-color: #1e1e1e; /* Slightly darker for occupied */
+        background-color: #1e1e1e; 
         border: 2px solid #333;
     }
-    
     .player-x {
         color: #00d2ff; /* Neon Cyan */
         text-shadow: 0 0 8px rgba(0, 210, 255, 0.6);
         border-color: #004d66;
     }
-    
     .player-o {
         color: #ff4b4b; /* Neon Red */
         text-shadow: 0 0 8px rgba(255, 75, 75, 0.6);
@@ -1024,6 +1021,7 @@ if 'agent1' in st.session_state and st.session_state.agent1.q_table:
         with col_h3:
             st.write("") # Spacer
             if st.button("🔥 Start New Match", use_container_width=True, type="primary"):
+                # Initialize new game with CURRENT grid_size
                 st.session_state.human_env = TicTacToe(grid_size, win_length)
                 st.session_state.human_game_active = True
                 
@@ -1040,10 +1038,19 @@ if 'agent1' in st.session_state and st.session_state.agent1.q_table:
                     st.session_state.current_turn = st.session_state.ai_player_id
                 else:
                     st.session_state.current_turn = st.session_state.human_player_id
+                
+                st.rerun()
 
     # 2. The Game Loop
     if 'human_env' in st.session_state and st.session_state.human_game_active:
         h_env = st.session_state.human_env
+        
+        # --- CRASH PREVENTION FIX ---
+        # Check if the active board size matches the current slider setting
+        if h_env.grid_size != grid_size:
+            st.warning(f"⚠️ Grid size changed from {h_env.grid_size}x{h_env.grid_size} to {grid_size}x{grid_size}. Please start a new match.")
+            st.session_state.human_game_active = False # Safely close the old game
+            st.rerun() # Refresh to hide the broken board
         
         # AI Turn Logic
         if h_env.current_player == st.session_state.ai_player_id and not h_env.game_over:
@@ -1069,13 +1076,15 @@ if 'agent1' in st.session_state and st.session_state.agent1.q_table:
             st.caption(f"Status: **{turn_msg}**")
 
         # --- THE VISUAL GRID ---
+        # SAFETY: Use the BOARD'S actual size for the loop, not the slider variable
+        # This prevents the crash even if the check above fails for some reason.
+        current_board_size = h_env.board.shape[0]
         board = h_env.board
         valid_moves = h_env.get_available_actions()
         
-        # We loop through rows and columns to create the grid
-        for r in range(grid_size):
-            cols = st.columns(grid_size)
-            for c in range(grid_size):
+        for r in range(current_board_size):
+            cols = st.columns(current_board_size)
+            for c in range(current_board_size):
                 cell_value = board[r, c]
                 button_key = f"btn_{r}_{c}_{len(h_env.move_history)}"
                 
