@@ -1066,7 +1066,7 @@ if 'agent1' in st.session_state and st.session_state.agent1.q_table:
         if h_env.game_over:
             if h_env.winner == st.session_state.human_player_id:
                 st.success("🎉 VICTORY! You defeated the AI!")
-                st.balloons()
+                
             elif h_env.winner == st.session_state.ai_player_id:
                 st.error("💀 DEFEAT! The AI is too strong.")
             else:
