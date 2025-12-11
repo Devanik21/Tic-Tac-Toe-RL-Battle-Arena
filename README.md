@@ -1040,6 +1040,6 @@ This software is provided for educational and research purposes. The agents are 
 ---
 
 *Document Version: 1.0*  
-*Last Updated: December 2024*  
+*Last Updated: December 2025*  
 *Total Words: ~9,800*  
 *Estimated Reading Time: 35-45 minutes*
