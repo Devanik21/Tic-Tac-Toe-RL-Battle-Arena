@@ -953,3 +953,112 @@ if 'agent1' in st.session_state and st.session_state.agent1.q_table:
         else: st.warning("🤝 The battle is a Draw!")
 else:
     st.info("Train or load agents to see the Final Battle option.")
+
+
+
+# ============================================================================
+# 🎮 NEW SECTION: Human vs. AI Arena
+# ============================================================================
+
+st.markdown("---")
+st.header("🎮 Human vs. AI Arena")
+st.info("Test your skills! Select an agent and play against it directly in the browser.")
+
+# Ensure agents exist before allowing play
+if 'agent1' in st.session_state and st.session_state.agent1.q_table:
+    
+    # 1. Game Setup Controls
+    col_h1, col_h2, col_h3 = st.columns(3)
+    with col_h1:
+        opponent_choice = st.selectbox("Choose Opponent", ["Agent 1 (Blue X)", "Agent 2 (Red O)"])
+    with col_h2:
+        starter = st.selectbox("Who starts?", ["Human", "AI"])
+    with col_h3:
+        # Reset button to start a fresh match
+        if st.button("Start New Match", use_container_width=True, type="primary"):
+            st.session_state.human_env = TicTacToe(grid_size, win_length)
+            st.session_state.human_game_active = True
+            # Set the AI player ID based on choice
+            if "Agent 1" in opponent_choice:
+                st.session_state.ai_player_id = 1
+                st.session_state.ai_agent = st.session_state.agent1
+                st.session_state.human_player_id = 2
+            else:
+                st.session_state.ai_player_id = 2
+                st.session_state.ai_agent = st.session_state.agent2
+                st.session_state.human_player_id = 1
+            
+            # If AI starts, we need to flag it
+            if starter == "AI":
+                st.session_state.current_turn = st.session_state.ai_player_id
+            else:
+                st.session_state.current_turn = st.session_state.human_player_id
+
+    # 2. The Game Loop
+    if 'human_env' in st.session_state and st.session_state.human_game_active:
+        h_env = st.session_state.human_env
+        
+        # --- AI TURN LOGIC ---
+        # If it is currently the AI's turn and the game is not over
+        if h_env.current_player == st.session_state.ai_player_id and not h_env.game_over:
+            with st.spinner(f"AI ({opponent_choice}) is thinking..."):
+                # Artificial delay for realism
+                import time
+                time.sleep(0.5) 
+                
+                # Agent chooses action (Exploration turned OFF for maximum difficulty)
+                ai_action = st.session_state.ai_agent.choose_action(h_env, training=False)
+                
+                if ai_action:
+                    h_env.make_move(ai_action)
+                    st.rerun() # Refresh screen after AI move
+
+        # --- DISPLAY BOARD ---
+        st.write(f"**Current Status:** {'🔴 Game Over' if h_env.game_over else '🟢 Playing'}")
+        
+        # Check for Game Over immediately to show result
+        if h_env.game_over:
+            if h_env.winner == st.session_state.human_player_id:
+                st.balloons()
+                st.success("🎉 YOU WON! The AI has been defeated!")
+            elif h_env.winner == st.session_state.ai_player_id:
+                st.error("💀 YOU LOST! The AI outsmarted you.")
+            else:
+                st.warning("🤝 It's a DRAW! A perfect game.")
+
+        # Draw the Interactive Grid
+        # We use standard Streamlit columns to make a grid
+        board = h_env.board
+        valid_moves = h_env.get_available_actions()
+        
+        for r in range(grid_size):
+            cols = st.columns(grid_size)
+            for c in range(grid_size):
+                # Determine what to show in the cell
+                cell_value = board[r, c]
+                button_key = f"btn_{r}_{c}_{len(h_env.move_history)}"
+                
+                if cell_value == 0:
+                    # Empty spot. If game active and Human turn, show button
+                    if not h_env.game_over and h_env.current_player == st.session_state.human_player_id:
+                        # Check if this specific move is valid (e.g. center ban rule)
+                        if (r, c) in valid_moves:
+                            if cols[c].button(" ", key=button_key, use_container_width=True):
+                                h_env.make_move((r, c))
+                                st.rerun()
+                        else:
+                            # Invalid move (blocked by rules), show disabled button
+                            cols[c].button("🚫", key=button_key, disabled=True, use_container_width=True)
+                    else:
+                        # Empty spot, but not human turn or game over
+                        cols[c].button(" ", key=button_key, disabled=True, use_container_width=True)
+                
+                elif cell_value == 1:
+                    # Player 1 (Blue X)
+                    cols[c].info("❌") 
+                elif cell_value == 2:
+                    # Player 2 (Red O)
+                    cols[c].error("⭕")
+
+else:
+    st.warning("⚠️ Please Train or Load agents to unlock the Arena.")
